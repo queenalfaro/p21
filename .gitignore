@@ -1,1 +1,35 @@
-.idea
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+.vite/
+
+# Environment files — only the example is committed
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Tests
+coverage/
+
+# Supabase local state (created by `supabase init` / `supabase start`)
+**/.supabase/
+
+# Misc
+.turbo/

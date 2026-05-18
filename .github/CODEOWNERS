@@ -2,5 +2,5 @@
 
 /.github/            @queenalfaro
 /.devcontainer/      @queenalfaro
-/.vscode/      @queenalfaro
+/.vscode/            @queenalfaro
 /docker-compose*.yml @queenalfaro

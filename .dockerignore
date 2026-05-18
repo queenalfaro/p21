@@ -1,0 +1,33 @@
+# Don't ship these to the docker build context — keeps builds fast and
+# avoids accidentally baking secrets into the image (we don't COPY anything
+# anyway, but defense in depth).
+
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build output
+dist
+build
+.vite
+coverage
+
+# Editor / OS / VCS
+.git
+.gitignore
+.idea
+.vscode
+*.swp
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Env files — never bake secrets into images
+.env
+.env.*
+!.env.example
+
+# Misc
+README.md

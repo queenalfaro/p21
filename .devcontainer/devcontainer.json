@@ -1,0 +1,53 @@
+{
+    "name": "Event App",
+
+    "dockerComposeFile": ["../compose.yaml"],
+    "service": "app",
+    "workspaceFolder": "/workspace",
+    "remoteUser": "node",
+
+    // forward ports
+    "forwardPorts": [5173],
+    "portsAttributes": {
+        "5173": {
+            "label": "Vite Dev Server",
+            "onAutoForward": "openPreview"
+        }
+    },
+
+    "features": {
+        "ghcr.io/devcontainers/features/github-cli:1": {}
+    },
+
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // Lint / format / editor hygiene
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "EditorConfig.EditorConfig",
+
+                // React / Tailwind
+                "bradlc.vscode-tailwindcss",
+                "dsznajder.es7-react-js-snippets",
+
+                // Supabase
+                "Supabase.vscode-supabase-extension",
+
+                // Git / GitHub
+                "eamodio.gitlens",
+                "GitHub.vscode-pull-request-github",
+                "GitHub.vscode-github-actions",
+
+                // Quality-of-life
+                "mikestead.dotenv",
+                "yzhang.markdown-all-in-one",
+                "streetsidesoftware.code-spell-checker"
+            ]
+        }
+    },
+
+    "postCreateCommand": "sudo chown node:node /workspace/node_modules ${PNPM_STORE_DIR} 2>/dev/null || true && pnpm install",
+
+    "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}"
+}

@@ -1,0 +1,14 @@
+{
+    "recommendations": [
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "EditorConfig.EditorConfig",
+        "bradlc.vscode-tailwindcss",
+        "dsznajder.es7-react-js-snippets",
+        "Supabase.vscode-supabase-extension",
+        "eamodio.gitlens",
+        "GitHub.vscode-pull-request-github",
+        "GitHub.vscode-github-actions",
+        "mikestead.dotenv"
+    ]
+}

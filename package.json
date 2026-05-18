@@ -1,0 +1,35 @@
+{
+  "name": "event-app",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Event coordination PWA — monorepo root",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --filter web dev",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml,css}\"",
+
+    "//": "------ Supabase ------",
+    "//1": "Run once per machine. Requires SUPABASE_PROJECT_REF in env (e.g. via Codespaces secret).",
+    "supabase:link": "supabase link --project-ref ${SUPABASE_PROJECT_REF}",
+
+    "//2": "Apply local migrations to the linked remote project (the dev cloud project).",
+    "supabase:db:push": "supabase db push --linked",
+
+    "//3": "Show schema drift between local migrations and the linked remote.",
+    "supabase:db:diff": "supabase db diff --linked",
+
+    "//4": "Regenerate TS types from the linked remote schema. Commit the result.",
+    "supabase:gen-types": "supabase gen types typescript --linked --schema public > apps/web/src/lib/supabase/database.types.ts",
+
+    "//5": "Scaffold a new timestamped migration file under supabase/migrations/.",
+    "supabase:migration:new": "supabase migration new"
+  }
+}
