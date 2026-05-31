@@ -39,7 +39,23 @@ export function useRealtimeMessages(roomId: string) {
                         user = data as MessageUser | null
                     }
 
-                    const msgWithUser: MessageWithUser = { ...newMsg, user }
+                    // Fetch parent message so the reply quote renders correctly
+                    let parent: MessageWithUser["parent"] = null
+                    if (newMsg.parent_id) {
+                        const { data: parentRow } = await supabase
+                            .from("messages")
+                            .select("id, type, payload, user_id, user:users(id, name)")
+                            .eq("id", newMsg.parent_id)
+                            .maybeSingle()
+                        if (parentRow) {
+                            const { user: parentUser, ...rest } = parentRow as {
+                                user: { id: string; name: string } | null
+                            } & typeof parentRow
+                            parent = { ...rest, user: parentUser } as MessageWithUser["parent"]
+                        }
+                    }
+
+                    const msgWithUser: MessageWithUser = { ...newMsg, user, parent }
 
                     // Prepend to last page (pages[last] = newest messages, DESC order).
                     // After flatMap+reverse in ChatFeed, new message appears at the bottom.

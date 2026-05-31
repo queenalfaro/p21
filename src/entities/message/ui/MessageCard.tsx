@@ -81,8 +81,8 @@ export function MessageCard({ message, isOwn, contentSlot, onReply }: MessageCar
                     </p>
                 )}
 
-                {/* Reply quote */}
-                {message.parent && (
+                {/* Reply quote — guard against array result from a misresolved self-join */}
+                {message.parent && !Array.isArray(message.parent) && message.parent.id && (
                     <ReplyQuote
                         parent={message.parent}
                         accentColor={
