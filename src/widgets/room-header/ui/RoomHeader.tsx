@@ -22,7 +22,11 @@ export function RoomHeader({ roomId, isAdmin = false }: RoomHeaderProps) {
             <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => navigate("/")}
+                onClick={() => {
+                    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0
+                    if (idx > 0) navigate(-1)
+                    else navigate("/", { replace: true })
+                }}
                 aria-label="Back to home"
             >
                 <HugeiconsIcon icon={ArrowLeft01Icon} size={20} />

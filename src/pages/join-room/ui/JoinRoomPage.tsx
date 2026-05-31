@@ -42,7 +42,16 @@ export function JoinRoomPage() {
     return (
         <div className="flex min-h-svh flex-col">
             <header className="bg-background sticky top-0 z-10 flex items-center gap-3 border-b px-2 py-2">
-                <Button variant="ghost" size="icon" onClick={() => navigate("/")} aria-label="Back">
+                <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                            const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0
+                            if (idx > 0) navigate(-1)
+                            else navigate("/", { replace: true })
+                        }}
+                        aria-label="Back"
+                    >
                     <HugeiconsIcon icon={ArrowLeft01Icon} size={20} />
                 </Button>
                 <h1 className="text-base font-semibold">Join Room</h1>
@@ -68,7 +77,7 @@ export function JoinRoomPage() {
                         <p className="text-muted-foreground mt-1 text-sm">
                             No room with handle @{roomname}
                         </p>
-                        <Button variant="outline" className="mt-4" onClick={() => navigate("/")}>
+                        <Button variant="outline" className="mt-4" onClick={() => navigate("/", { replace: true })}>
                             Go Home
                         </Button>
                     </div>
