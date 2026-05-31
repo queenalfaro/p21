@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { flushSync } from "react-dom"
 import { useRegisterSW } from "virtual:pwa-register/react"
 
 /**
@@ -38,7 +39,9 @@ export function usePwaLifecycle() {
 
     async function installPrompt() {
         if (!installEvent) return
-        setInstallPending(true)
+        // flushSync forces React to commit the pending state before prompt() is called,
+        // preventing appinstalled from firing in the same render batch and skipping this state
+        flushSync(() => setInstallPending(true))
         installEvent.prompt()
         const { outcome } = await installEvent.userChoice
         setInstallPending(false)
