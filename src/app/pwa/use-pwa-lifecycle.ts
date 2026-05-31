@@ -10,6 +10,8 @@ import { useRegisterSW } from "virtual:pwa-register/react"
  */
 export function usePwaLifecycle() {
     const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
+    // Session-only: true after user clicks "Later". Resets on tab close/reload.
+    const [installDismissed, setInstallDismissed] = useState(false)
 
     // Capture the browser's install prompt event
     useEffect(() => {
@@ -27,6 +29,10 @@ export function usePwaLifecycle() {
         setInstallEvent(null)
     }
 
+    function dismissInstall() {
+        setInstallDismissed(true)
+    }
+
     // SW update flow: prompt = user decides when to apply
     const {
         needRefresh: [needsUpdate],
@@ -42,8 +48,9 @@ export function usePwaLifecycle() {
     }
 
     return {
-        isInstallable: installEvent !== null,
+        isInstallable: installEvent !== null && !installDismissed,
         installPrompt,
+        dismissInstall,
         needsUpdate,
         applyUpdate,
     }
