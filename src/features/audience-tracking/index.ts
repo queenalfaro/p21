@@ -1,0 +1,8 @@
+export type { EngagementStatus, EngineResult, SignalSnapshot } from "./model/types"
+export { classify } from "./model/engine"
+export { signalState, toSnapshot } from "./lib/signal-state"
+export { startVisibilityCollector } from "./collectors/visibility"
+export { startFocusCollector } from "./collectors/focus"
+export { startLifecycleCollector } from "./collectors/lifecycle"
+export { startInteractionCollector } from "./collectors/interaction"
+export { startHeartbeatCollector } from "./collectors/heartbeat"

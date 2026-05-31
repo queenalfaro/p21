@@ -1,6 +1,0 @@
-# Linked-project state, kept per-developer
-.branches
-.temp
-
-# Local dotenv (we don't run local stack, but just in case)
-.env

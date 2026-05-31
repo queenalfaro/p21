@@ -1,0 +1,29 @@
+services:
+
+    app:
+
+        init: true
+        command: bash -c "sleep infinity"
+
+        user: node
+        working_dir: /workspace
+
+        build:
+            context: .
+            dockerfile: Dockerfile
+
+        ports:
+            - "5173:5173"
+
+        env_file:
+            - path: .env
+              required: false
+
+        volumes:
+            - .:/workspace:cached
+            - node_modules:/workspace/node_modules
+            - pnpm_store:/home/node/.local/share/pnpm/store
+
+volumes:
+    node_modules:
+    pnpm_store:

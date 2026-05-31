@@ -1,197 +1,159 @@
-# Supabase — настройка и workflow
+Уже есть готовый развернутый dev сервер со следующей sql схемой:
 
-Этот документ описывает, как у нас устроен бэкенд: какие проекты в Supabase, кто и как накатывает миграции, откуда берутся типы во фронтенде.
+```sql
+-- Функция для автоматического обновления поля updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
 
-## Архитектура
+-- Типы статусов комнаты
+CREATE TYPE room_status AS ENUM ('draft', 'active', 'completed');
 
-Два **облачных** проекта в Supabase:
+-- Базовые роли в комнате
+CREATE TYPE room_role AS ENUM ('admin', 'user');
 
-| Проект      | Где живёт                  | Кто туда пишет                    |
-|-------------|----------------------------|-----------------------------------|
-| `dev`       | подключён к репо через CLI | лиды, при разработке             |
-| `prod`      | подключён только из CI     | автоматически при merge в `main` |
+-- Типы сообщений (расширяемо)
+CREATE TYPE message_type AS ENUM ('text', 'poll', 'checklist', 'rating', 'system');
 
-**Локальный Supabase стек мы не запускаем.** Никакого `supabase start`, никакого docker-in-docker в Codespaces. Все миграции тестируются прямо на dev-проекте — он и есть наша staging-среда. Это упрощение сознательное: надо минимизировать движущиеся части.
 
-Источник правды для схемы — папка `supabase/migrations/`. Если что-то меняется в БД, оно меняется через миграцию в репо, а не через клик в дашборде.
 
----
+-- ПОЛЬЗОВАТЕЛИ
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL, -- Обязательно даже для анонимов
+    username VARCHAR(255) UNIQUE, -- Уникальный ник для полных профилей
+    avatar_url TEXT,
+    is_anonymous BOOLEAN DEFAULT true,
+    settings JSONB DEFAULT '{}'::jsonb, -- Настройки пушей, темы и т.д.
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TRIGGER update_users_modtime BEFORE UPDATE ON users FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
-## Часть 1 — Однократная настройка (делают лиды)
+-- КОМНАТЫ (Мероприятия)
+CREATE TABLE rooms (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    roomname VARCHAR(255) UNIQUE NOT NULL, -- Уникальный ID для ссылок (например, my-event-2024)
+    description TEXT,
+    avatar_url TEXT,
+    status room_status DEFAULT 'draft',
+    starts_at TIMESTAMPTZ,
+    ends_at TIMESTAMPTZ,
+    settings JSONB DEFAULT '{}'::jsonb, -- Глобальные настройки комнаты (кто может писать и т.д.)
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TRIGGER update_rooms_modtime BEFORE UPDATE ON rooms FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
-### 1.1. Создать два проекта в Supabase
+-- УЧАСТНИКИ КОМНАТЫ (Связь Many-to-Many)
+CREATE TABLE room_members (
+    room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    role room_role DEFAULT 'user',
+    permissions JSONB DEFAULT '[]'::jsonb, -- Кастомные пермишены (например: ["manage_room", "pin_messages"])
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (room_id, user_id) -- Один юзер = одна запись в рамках комнаты
+);
+CREATE INDEX idx_room_members_user ON room_members(user_id);
 
-1. Зарегистрируйся на <https://supabase.com> (через GitHub быстрее всего).
-2. **New Project** × 2:
-   - Имя: `event-app-dev`, регион — ближайший к команде (Frankfurt для Европы).
-   - Имя: `event-app-prod`, тот же регион.
-   - Database password: сгенерируй и сохрани в менеджер паролей — он нужен раз, и потом ещё раз когда забудешь.
-3. Подожди \~2 минуты, пока оба провижнятся.
 
-> **Free tier** даёт 2 активных проекта, по 500 MB БД, 1 GB storage, 50 000 MAU. Этого хватает с запасом. Третий проект Supabase автоматически уведёт в paused — учитывай.
 
-### 1.2. Записать project refs
+-- СООБЩЕНИЯ
+CREATE TABLE messages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL, -- При удалении юзера сообщение останется (как в ТГ)
+    parent_id UUID REFERENCES messages(id) ON DELETE CASCADE, -- Для тредов/веток (reply_to)
+    type message_type DEFAULT 'text',
+    payload JSONB DEFAULT '{}'::jsonb, -- Данные (например: текст сообщения, массив вариантов ответов для опроса, UI-настройки)
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE TRIGGER update_messages_modtime BEFORE UPDATE ON messages FOR EACH ROW EXECUTE PROCEDURE update_updated_at_column();
 
-В URL дашборда каждого проекта есть слаг:
-`https://supabase.com/dashboard/project/`**`abcdefghijklmnop`**
+-- Индекс для супер-быстрой загрузки бесконечной ленты сообщений комнаты
+CREATE INDEX idx_messages_feed ON messages(room_id, created_at DESC);
+CREATE INDEX idx_messages_thread ON messages(parent_id) WHERE parent_id IS NOT NULL;
 
-Это **project ref**. Запиши оба — будут нужны и для CLI, и для Vercel.
+-- ВЗАИМОДЕЙСТВИЯ (Голоса в опросах, галочки в чеклистах)
+CREATE TABLE message_interactions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    message_id UUID REFERENCES messages(id) ON DELETE CASCADE,
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    interaction_type VARCHAR(50) NOT NULL, -- 'vote', 'check', 'rate'
+    value JSONB NOT NULL, -- За что проголосовали: {"option_index": 1} или {"checked_items": [1, 3]}
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (message_id, user_id, interaction_type) -- Пользователь может проголосовать только 1 раз в 1 опросе
+);
+CREATE INDEX idx_message_interactions_msg ON message_interactions(message_id);
 
-### 1.3. Получить личный access token
 
-1. <https://supabase.com/dashboard/account/tokens> → **Generate new token**.
-2. Назови `event-app codespaces` или вроде того.
-3. Скопируй сразу — больше не покажут.
 
-### 1.4. Прокинуть секреты в Codespaces
+-- АНАЛИТИКА
 
-В GitHub: **Settings → Codespaces → Secrets → New repository secret**.
+-- 1. Таблица ТЕКУЩЕГО состояния (Здесь хранится последнее слово пользователя)
+-- Делаем её UNLOGGED, чтобы частые пинги не насиловали жесткий диск сервера
+CREATE UNLOGGED TABLE current_user_states (
+    user_id UUID PRIMARY KEY,
+    room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
+    status VARCHAR(20) NOT NULL,
+    last_ping_at TIMESTAMPTZ DEFAULT NOW()
+);
 
-| Имя секрета               | Значение                              | Для кого           |
-|---------------------------|---------------------------------------|--------------------|
-| `SUPABASE_ACCESS_TOKEN`   | токен из шага 1.3                     | только лиды        |
-| `SUPABASE_PROJECT_REF`    | ref dev-проекта (из 1.2)              | вся команда        |
-| `VITE_SUPABASE_URL`       | `https://<dev-ref>.supabase.co`       | вся команда        |
-| `VITE_SUPABASE_ANON_KEY`  | dashboard → Settings → API → anon key | вся команда        |
+-- 2. Функция для клиента: обновить свой статус
+CREATE OR REPLACE FUNCTION update_my_status(p_user_id UUID, p_room_id UUID, p_status VARCHAR)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO current_user_states (user_id, room_id, status, last_ping_at)
+    VALUES (p_user_id, p_room_id, p_status, NOW())
+    ON CONFLICT (user_id) DO UPDATE
+    SET room_id = EXCLUDED.room_id,
+        status = EXCLUDED.status,
+        last_ping_at = NOW();
+END;
+$$;
 
-Ограничь scope каждого секрета (`Repository access` → выбери только этот репо). Для `SUPABASE_ACCESS_TOKEN` дополнительно — `Selected users only` (только лиды).
+-- 3. Таблица ИСТОРИИ (Таймлайн для графика)
+CREATE TABLE analytics_timeline (
+    room_id UUID REFERENCES rooms(id) ON DELETE CASCADE,
+    bucket_time TIMESTAMPTZ NOT NULL, -- Время среза (например 12:00, 12:01)
+    engaged_count INT DEFAULT 0,
+    distracted_count INT DEFAULT 0,
+    unknown_count INT DEFAULT 0,
+    PRIMARY KEY (room_id, bucket_time)
+);
 
-При следующем создании Codespace эти переменные окажутся в env автоматически — копировать в `.env` не надо.
+-- Включаем планировщик
+CREATE EXTENSION IF NOT EXISTS pg_cron;
 
-### 1.5. Применить миграции на dev-проект
+-- 4. Функция, которая делает Snapshot (фотографию)
+CREATE OR REPLACE FUNCTION take_analytics_snapshot()
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO analytics_timeline (room_id, bucket_time, engaged_count, distracted_count, unknown_count)
+    SELECT
+        s.room_id,
+        date_trunc('minute', NOW()) AS bucket_time, -- Округляем до текущей минуты
+        COUNT(*) FILTER (WHERE s.status = 'engaged'),
+        COUNT(*) FILTER (WHERE s.status = 'distracted'),
+        COUNT(*) FILTER (WHERE s.status = 'unknown')
+    FROM current_user_states s
+    JOIN rooms r ON s.room_id = r.id
+    WHERE r.status = 'active' -- Считаем статистику ТОЛЬКО для идущих мероприятий
+    GROUP BY s.room_id;
 
-Внутри Codespace (или локального devcontainer'а):
+    -- ЗАМЕТЬТЕ: Мы НЕ удаляем старые записи из current_user_states.
+    -- Если человек отвалился 2 часа назад в статусе engaged, он попадет в этот COUNT.
+END;
+$$;
 
-```bash
-# Залинкаться с dev-проектом (один раз на codespace)
-pnpm supabase:link
-
-# Накатить всё, что лежит в supabase/migrations/
-pnpm supabase:db:push
-
-# Сгенерировать типы и закоммитить
-pnpm supabase:gen-types
-git add apps/web/src/lib/supabase/database.types.ts
-git commit -m "chore: regenerate supabase types"
+-- 5. Запускаем cron: делать фотографию каждую минуту
+SELECT cron.schedule('snapshot_analytics', '* * * * *', 'SELECT take_analytics_snapshot()');
 ```
 
-После этого `apps/web/src/lib/supabase/database.types.ts` содержит реальную схему и фронтенд получает полный type-safety.
-
-### 1.6. Donastroить cloud dashboard
-
-Эти вещи **не** управляются миграциями, их надо ткнуть в UI каждого проекта:
-
-**Authentication → URL Configuration**
-- *Site URL:* `https://<твой-vercel-домен>.vercel.app` (для prod), `http://localhost:5173` (для dev)
-- *Redirect URLs:* добавь оба
-
-**Authentication → Providers**
-- *Email* — включить, для **dev** выключить "Confirm email" (быстрее тестировать), для **prod** оставить включённым
-- *Anonymous Sign-Ins* — включить (требование ТЗ)
-- *Google / Phone / прочее* — позже, по мере появления задач
-
-**Database → Replication**
-- Проверь что `supabase_realtime` publication содержит `messages` и `room_members` (миграция уже это делает, просто убедись).
-
----
-
-## Часть 2 — Повседневный workflow
-
-### Кто что делает
-
-| Действие                          | Кто         | Команда                       |
-|-----------------------------------|-------------|-------------------------------|
-| Пишет код на фронте               | вся команда | `pnpm dev`                    |
-| Создаёт новую миграцию            | **лид**     | `pnpm supabase:migration:new add_foo` |
-| Применяет миграцию на dev         | **лид**     | `pnpm supabase:db:push`       |
-| Регенерирует типы                 | **лид**     | `pnpm supabase:gen-types`     |
-| Применяет миграцию на prod        | CI          | автоматически при merge в `main` |
-
-### Добавить поле в БД
-
-Допустим, хотим добавить `pinned_at timestamptz` к `messages`.
-
-```bash
-# 1) Сгенерировать пустую миграцию с правильным timestamp
-pnpm supabase:migration:new add_pinned_at_to_messages
-
-# Откроется новый файл supabase/migrations/<ts>_add_pinned_at_to_messages.sql
-# Впиши туда:
-#   alter table public.messages add column pinned_at timestamptz;
-
-# 2) Применить на dev cloud
-pnpm supabase:db:push
-
-# 3) Перегенерировать типы
-pnpm supabase:gen-types
-
-# 4) Закоммитить миграцию + типы в одной ветке
-git add supabase/migrations apps/web/src/lib/supabase/database.types.ts
-git commit -m "feat(db): add pinned_at to messages"
-```
-
-После merge в `main` миграция автоматически уйдёт на prod (когда настроим CI — задача номер N).
-
-### Я что-то поломал в dev БД, верните как было
-
-> Откатов через CLI у Supabase в простой форме нет.
->
-> На dev можно поступить грубо: в дашборде `Settings → General → Pause project → Restore from backup` (бекапы есть на free tier за последние 7 дней). Либо `DROP SCHEMA public CASCADE` через SQL Editor и заново `pnpm supabase:db:push`. Только на **dev**, никогда на prod.
-
-### RLS залочила меня, не могу прочитать свои же данные
-
-В дашборде → **Authentication → Policies** → найди таблицу. Можно временно отключить RLS на таблице (`Disable RLS`), починить, проверить и снова включить. Любое изменение политики оформляем как новую миграцию, чтобы оно поехало на prod.
-
----
-
-## Часть 3 — Доменная модель (что лежит в БД)
-
-Подробности в `supabase/migrations/20260517000000_initial_schema.sql`. Кратко:
-
-```
-auth.users  ──1:1──  profiles
-    │
-    └──N:M──  room_members  ──N:1──  rooms
-                                       │
-                                       └──1:N──  messages
-```
-
-- **`profiles`** создаётся автоматически триггером при signup (читает `username` и `display_name` из `raw_user_meta_data`).
-- **`rooms`** имеет `code` для приглашений, `is_public` для публичных, `status` enum, `settings jsonb` для расширений.
-- **`room_members`** держит роль (`admin` / `member`) и опциональный `permissions text[]` для кастомных прав. **На фронте проверяем `can('create_poll')`**, а не `role === 'admin'` — массив permissions для этого.
-- **`messages`** — единая лента из ТЗ. Все «спецсообщения» (опросы, чеклисты, оценки, системки) — это строки с разным `type` и `payload jsonb`. На фронте по типу выбирается React-компонент.
-- **Realtime** включён на `messages` и `room_members`. RLS применяется и к подпискам — пользователь получает только те ивенты, которые ему разрешено видеть.
-- **Storage**: один публичный bucket `avatars/`. Конвенция пути — `avatars/{user_id}/<filename>` — на этом построены политики (загрузить можно только в свою папку).
-
-### Использование во фронте
-
-```ts
-import { supabase } from '@/lib/supabase';
-
-// типизировано автоматически по сгенерированной схеме
-const { data, error } = await supabase
-  .from('rooms')
-  .select('id, name, status, room_members(user_id, role)')
-  .eq('is_public', true);
-```
-
-Помни архитектурное правило из ТЗ: **UI-компоненты не дёргают `supabase` напрямую**. Этот импорт живёт только в `src/services/*` (или actions в Zustand). Из компонента вызывается сервис, который возвращает данные. Так мы сможем потом подменить транспорт, не переписывая UI.
-
----
-
-## Troubleshooting
-
-**`supabase link` ругается на отсутствие токена**
-Codespaces secret `SUPABASE_ACCESS_TOKEN` не пробросился (например, ты не лид и у тебя нет доступа). Сделай `export SUPABASE_ACCESS_TOKEN=sbp_...` в текущей сессии — для разовых операций ОК.
-
-**`db push` пишет "schema drift detected"**
-В cloud-проекте что-то поменяли через UI, минуя миграции. Открой `pnpm supabase:db:diff`, перенеси изменения в новую миграцию вручную, закоммить, потом `db push` пройдёт. Этой ситуации избегаем — не правим схему через дашборд.
-
-**`gen-types` возвращает пустой файл**
-Не выполнен `supabase link`, либо `SUPABASE_PROJECT_REF` неверный, либо токена нет в env.
-
-**RLS recursion error**
-Если пишешь новую политику, которая обращается к таблице, на которой эта политика и висит — оборачивай проверку в `SECURITY DEFINER` функцию (как сделано с `is_room_member` / `is_room_admin`).
-
-**"new row violates row-level security policy"**
-Самая частая ошибка у новичков. Открой соответствующую таблицу в `supabase/migrations/...`, найди policy на `insert` для этой таблицы, проверь `with check`. Скорее всего там `auth.uid() = something_id`, а ты передаёшь что-то другое.
+Локльного supabase cli нету, все взаимодействия производятся через web интерфейс (ux/ui или SQL Editor - второй предпочтительнее, так как ux/ui часто меняются).

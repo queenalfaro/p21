@@ -1,14 +1,28 @@
 {
     "recommendations": [
-        "dbaeumer.vscode-eslint",
-        "esbenp.prettier-vscode",
-        "EditorConfig.EditorConfig",
-        "bradlc.vscode-tailwindcss",
-        "dsznajder.es7-react-js-snippets",
-        "Supabase.vscode-supabase-extension",
-        "eamodio.gitlens",
-        "GitHub.vscode-pull-request-github",
-        "GitHub.vscode-github-actions",
-        "mikestead.dotenv"
+                // Lint / format / editor hygiene
+                "dbaeumer.vscode-eslint",
+                "esbenp.prettier-vscode",
+                "EditorConfig.EditorConfig",
+
+                // React / Tailwind
+                "bradlc.vscode-tailwindcss",
+                "dsznajder.es7-react-js-snippets",
+
+                // Supabase
+                "Supabase.vscode-supabase-extension",
+
+                // Git / GitHub
+                "eamodio.gitlens",
+                "GitHub.vscode-pull-request-github",
+                "GitHub.vscode-github-actions",
+
+                // Quality-of-life
+                "mikestead.dotenv",
+                "yzhang.markdown-all-in-one",
+                "streetsidesoftware.code-spell-checker",
+
+                // Claude Code VSCode extension
+                "anthropic.claude-code"
     ]
 }

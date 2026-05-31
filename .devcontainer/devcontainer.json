@@ -1,23 +1,24 @@
 {
     "name": "Event App",
 
-    "dockerComposeFile": ["../compose.yaml"],
+    "dockerComposeFile": ["../docker-compose.yml"],
     "service": "app",
     "workspaceFolder": "/workspace",
     "remoteUser": "node",
 
-    // forward ports
     "forwardPorts": [5173],
-    "portsAttributes": {
-        "5173": {
-            "label": "Vite Dev Server",
-            "onAutoForward": "openPreview"
-        }
-    },
+
+    "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
 
     "features": {
-        "ghcr.io/devcontainers/features/github-cli:1": {}
+        "ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {}
     },
+
+    "mounts": [
+        "source=\\\\wsl.localhost\\Ubuntu\\home\\user\\.claude,target=/home/node/.claude,type=bind,consistency=cached",
+        "source=\\\\wsl.localhost\\Ubuntu\\home\\user\\.claude.json,target=/home/node/.claude.json,type=bind,consistency=cached"
+    ],
 
     "customizations": {
         "vscode": {
@@ -42,12 +43,11 @@
                 // Quality-of-life
                 "mikestead.dotenv",
                 "yzhang.markdown-all-in-one",
-                "streetsidesoftware.code-spell-checker"
+                "streetsidesoftware.code-spell-checker",
+
+                // Claude Code VSCode extension
+                "anthropic.claude-code"
             ]
         }
-    },
-
-    "postCreateCommand": "sudo chown node:node /workspace/node_modules ${PNPM_STORE_DIR} 2>/dev/null || true && pnpm install",
-
-    "postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}"
+    }
 }

@@ -1,35 +1,33 @@
-# Dependencies
-node_modules/
-.pnpm-store/
-
-# Build output
-dist/
-build/
-.vite/
-
-# Environment files — only the example is committed
-.env
-.env.local
-.env.*.local
-!.env.example
-
 # Logs
+logs
 *.log
 npm-debug.log*
-pnpm-debug.log*
+yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Editor / OS
-.idea/
-*.swp
+node_modules
+dist
+dist-ssr
+dev-dist
+*.local
+
+# Editor directories and files
+.idea
 .DS_Store
-Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 
-# Tests
-coverage/
+docs
+.pnpm-store
+.idea/
+.dev
 
-# Supabase local state (created by `supabase init` / `supabase start`)
-**/.supabase/
-
-# Misc
-.turbo/
+# Env — never commit real secrets; only the placeholder example is tracked
+.env
+.env.*
+!.env.example

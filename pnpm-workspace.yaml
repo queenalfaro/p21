@@ -1,6 +1,0 @@
-# pnpm workspaces — every folder matching these patterns becomes a package.
-# Add `apps/web` (your Vite app) and any `packages/*` you create here.
-
-packages:
-  - apps/*
-  - packages/*
