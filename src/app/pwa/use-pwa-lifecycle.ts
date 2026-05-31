@@ -12,6 +12,7 @@ export function usePwaLifecycle() {
     const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
     // Session-only: true after user clicks "Later". Resets on tab close/reload.
     const [installDismissed, setInstallDismissed] = useState(false)
+    const [updateDismissed, setUpdateDismissed] = useState(false)
 
     // Capture the browser's install prompt event
     useEffect(() => {
@@ -33,6 +34,10 @@ export function usePwaLifecycle() {
         setInstallDismissed(true)
     }
 
+    function dismissUpdate() {
+        setUpdateDismissed(true)
+    }
+
     // SW update flow: prompt = user decides when to apply
     const {
         needRefresh: [needsUpdate],
@@ -51,8 +56,9 @@ export function usePwaLifecycle() {
         isInstallable: installEvent !== null && !installDismissed,
         installPrompt,
         dismissInstall,
-        needsUpdate,
+        needsUpdate: needsUpdate && !updateDismissed,
         applyUpdate,
+        dismissUpdate,
     }
 }
 
