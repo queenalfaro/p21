@@ -28,6 +28,7 @@ export function CreateChecklistSheet({ roomId, onSuccess }: CreateChecklistSheet
         handleSubmit,
         formState: { errors },
         setValue,
+        getValues,
     } = useForm<ChecklistForm>({
         resolver: zodResolver(checklistSchema),
         defaultValues: { title: "", items: [""] },
@@ -35,14 +36,14 @@ export function CreateChecklistSheet({ roomId, onSuccess }: CreateChecklistSheet
 
     function addItem() {
         if (items.length >= 20) return
-        const next = [...items, ""]
+        const next = [...getValues("items"), ""]
         setItems(next)
         setValue("items", next)
     }
 
     function removeItem(idx: number) {
         if (items.length <= 1) return
-        const next = items.filter((_, i) => i !== idx)
+        const next = getValues("items").filter((_, i) => i !== idx)
         setItems(next)
         setValue("items", next)
     }

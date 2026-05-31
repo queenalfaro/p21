@@ -28,6 +28,7 @@ export function CreatePollSheet({ roomId, onSuccess }: CreatePollSheetProps) {
         handleSubmit,
         formState: { errors },
         setValue,
+        getValues,
     } = useForm<PollForm>({
         resolver: zodResolver(pollSchema),
         defaultValues: { question: "", options: ["", ""] },
@@ -35,14 +36,14 @@ export function CreatePollSheet({ roomId, onSuccess }: CreatePollSheetProps) {
 
     function addOption() {
         if (options.length >= 10) return
-        const next = [...options, ""]
+        const next = [...getValues("options"), ""]
         setOptions(next)
         setValue("options", next)
     }
 
     function removeOption(idx: number) {
         if (options.length <= 2) return
-        const next = options.filter((_, i) => i !== idx)
+        const next = getValues("options").filter((_, i) => i !== idx)
         setOptions(next)
         setValue("options", next)
     }
