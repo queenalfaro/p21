@@ -12,6 +12,7 @@ export function usePwaLifecycle() {
     const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
     // Session-only: true after user clicks "Later". Resets on tab close/reload.
     const [installDismissed, setInstallDismissed] = useState(false)
+    const [installAccepted, setInstallAccepted] = useState(false)
     const [updateDismissed, setUpdateDismissed] = useState(false)
 
     // Capture the browser's install prompt event
@@ -20,18 +21,38 @@ export function usePwaLifecycle() {
             e.preventDefault()
             setInstallEvent(e as BeforeInstallPromptEvent)
         }
+        // appinstalled fires when OS finishes installation — close dialog automatically
+        function onAppInstalled() {
+            setInstallEvent(null)
+            setInstallAccepted(false)
+        }
         window.addEventListener("beforeinstallprompt", onInstallPrompt)
-        return () => window.removeEventListener("beforeinstallprompt", onInstallPrompt)
+        window.addEventListener("appinstalled", onAppInstalled)
+        return () => {
+            window.removeEventListener("beforeinstallprompt", onInstallPrompt)
+            window.removeEventListener("appinstalled", onAppInstalled)
+        }
     }, [])
 
     async function installPrompt() {
         if (!installEvent) return
-        await installEvent.prompt()
-        setInstallEvent(null)
+        installEvent.prompt()
+        const { outcome } = await installEvent.userChoice
+        if (outcome === "accepted") {
+            setInstallAccepted(true)
+        } else {
+            setInstallEvent(null)
+        }
     }
 
     function dismissInstall() {
         setInstallDismissed(true)
+        setInstallAccepted(false)
+    }
+
+    function acknowledgeInstall() {
+        setInstallEvent(null)
+        setInstallAccepted(false)
     }
 
     function dismissUpdate() {
@@ -54,8 +75,10 @@ export function usePwaLifecycle() {
 
     return {
         isInstallable: installEvent !== null && !installDismissed,
+        installAccepted,
         installPrompt,
         dismissInstall,
+        acknowledgeInstall,
         needsUpdate: needsUpdate && !updateDismissed,
         applyUpdate,
         dismissUpdate,

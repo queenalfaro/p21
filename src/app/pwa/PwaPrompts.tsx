@@ -5,47 +5,78 @@ import { Button } from "@/shared/ui/button"
 import { usePwaLifecycle } from "./use-pwa-lifecycle"
 
 export function PwaPrompts() {
-    const { isInstallable, installPrompt, dismissInstall, needsUpdate, applyUpdate, dismissUpdate } =
-        usePwaLifecycle()
+    const {
+        isInstallable,
+        installAccepted,
+        installPrompt,
+        dismissInstall,
+        acknowledgeInstall,
+        needsUpdate,
+        applyUpdate,
+        dismissUpdate,
+    } = usePwaLifecycle()
 
     return (
         <>
             {/* ── Install dialog ───────────────────────────────────────────── */}
-            <Dialog open={isInstallable} onOpenChange={(open) => !open && dismissInstall()}>
+            <Dialog
+                open={isInstallable}
+                onOpenChange={(open) => !open && (installAccepted ? acknowledgeInstall() : dismissInstall())}
+            >
                 <DialogContent className="max-w-xs">
-                    <button
-                        onClick={dismissInstall}
-                        className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
-                        aria-label="Close"
-                    >
-                        <HugeiconsIcon icon={Cancel01Icon} size={18} />
-                    </button>
+                    {installAccepted ? (
+                        /* Success state — shown after OS accepted install */
+                        <>
+                            <div className="mb-4 flex flex-col items-center gap-3 text-center">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
+                                    EA
+                                </div>
+                                <DialogTitle>App Installed!</DialogTitle>
+                            </div>
+                            <DialogDescription className="mb-5 text-center text-sm leading-relaxed">
+                                Event App has been added to your home screen. Open it from there for the best experience.
+                            </DialogDescription>
+                            <Button className="w-full" onClick={acknowledgeInstall}>
+                                Got it
+                            </Button>
+                        </>
+                    ) : (
+                        /* Default install prompt */
+                        <>
+                            <button
+                                onClick={dismissInstall}
+                                className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+                                aria-label="Close"
+                            >
+                                <HugeiconsIcon icon={Cancel01Icon} size={18} />
+                            </button>
 
-                    {/* App icon */}
-                    <div className="mb-4 flex items-center gap-3">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
-                            EA
-                        </div>
-                        <div>
-                            <DialogTitle>Event App</DialogTitle>
-                            <p className="text-xs text-muted-foreground">Install app</p>
-                        </div>
-                    </div>
+                            <div className="mb-4 flex items-center gap-3">
+                                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
+                                    EA
+                                </div>
+                                <div>
+                                    <DialogTitle>Event App</DialogTitle>
+                                    <p className="text-xs text-muted-foreground">Install app</p>
+                                </div>
+                            </div>
 
-                    <DialogDescription className="mb-5 space-y-1.5 text-sm leading-relaxed">
-                        <span className="block">📶 Works offline</span>
-                        <span className="block">⚡ Fast launch from your home screen</span>
-                        <span className="block">🔕 No browser address bar</span>
-                    </DialogDescription>
+                            <DialogDescription className="mb-5 space-y-1.5 text-sm leading-relaxed">
+                                <span className="block">📶 Works offline</span>
+                                <span className="block">⚡ Fast launch from your home screen</span>
+                                <span className="block">🔕 No browser address bar</span>
+                            </DialogDescription>
 
-                    <div className="flex flex-col gap-2">
-                        <Button className="w-full" onClick={installPrompt}>
-                            Install
-                        </Button>
-                        <Button variant="ghost" className="w-full" onClick={dismissInstall}>
-                            Later
-                        </Button>
-                    </div>
+                            <div className="flex flex-col gap-2">
+                                <Button className="w-full" onClick={installPrompt}>
+                                    Install
+                                </Button>
+                                <Button variant="ghost" className="w-full" onClick={dismissInstall}>
+                                    Later
+                                </Button>
+                            </div>
+                        </>
+                    )}
                 </DialogContent>
             </Dialog>
 
