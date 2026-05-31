@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { toast } from "sonner"
@@ -31,10 +31,14 @@ export function EditRoomForm({ roomId }: EditRoomFormProps) {
         register,
         handleSubmit,
         reset,
+        watch,
         formState: { errors, isDirty },
     } = useForm<EditRoomValues>({
         resolver: zodResolver(editRoomSchema),
     })
+
+    const avatarUrlValue = watch("avatar_url")
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
     // Populate form when room data arrives
     useEffect(() => {
@@ -42,17 +46,25 @@ export function EditRoomForm({ roomId }: EditRoomFormProps) {
         reset({
             name: room.name,
             description: room.description ?? "",
+            avatar_url: room.avatar_url ?? "",
             status: (room.status as EditRoomValues["status"]) ?? "draft",
             starts_at: toDatetimeLocal(room.starts_at),
             ends_at: toDatetimeLocal(room.ends_at),
         })
+        setAvatarPreview(room.avatar_url ?? null)
     }, [room, reset])
+
+    // Update preview when URL field changes
+    useEffect(() => {
+        setAvatarPreview(avatarUrlValue || null)
+    }, [avatarUrlValue])
 
     async function onSubmit(values: EditRoomValues) {
         try {
             await updateRoom({
                 name: values.name,
                 description: values.description || null,
+                avatar_url: values.avatar_url || null,
                 status: values.status,
                 starts_at: values.starts_at ? fromDatetimeLocal(values.starts_at) : null,
                 ends_at: values.ends_at ? fromDatetimeLocal(values.ends_at) : null,
@@ -74,6 +86,38 @@ export function EditRoomForm({ roomId }: EditRoomFormProps) {
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 p-4">
+            {/* Avatar preview + URL input */}
+            <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-muted">
+                        {avatarPreview ? (
+                            <img
+                                src={avatarPreview}
+                                alt="Room avatar"
+                                className="h-full w-full object-cover"
+                                onError={() => setAvatarPreview(null)}
+                            />
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center text-sm font-bold text-muted-foreground">
+                                {room.name.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+                    </div>
+                    <div className="min-w-0 flex-1 space-y-1">
+                        <Label htmlFor="room-avatar" className="text-xs">Avatar URL</Label>
+                        <Input
+                            id="room-avatar"
+                            {...register("avatar_url")}
+                            placeholder="https://…"
+                            className="text-sm"
+                        />
+                    </div>
+                </div>
+                {errors.avatar_url && (
+                    <p className="text-xs text-destructive">{errors.avatar_url.message}</p>
+                )}
+            </div>
+
             <div className="space-y-1">
                 <Label htmlFor="room-name" className="text-xs">Name</Label>
                 <Input id="room-name" {...register("name")} className="text-sm" />

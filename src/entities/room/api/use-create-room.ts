@@ -3,7 +3,7 @@ import { supabase } from "@/shared/api"
 import type { TablesInsert } from "@/shared/api"
 import type { Room } from "../model/types"
 
-type CreateRoomPayload = Pick<TablesInsert<"rooms">, "name" | "roomname" | "description" | "starts_at">
+type CreateRoomPayload = Pick<TablesInsert<"rooms">, "name" | "roomname" | "description" | "starts_at" | "avatar_url">
 
 export function useCreateRoom(userId: string) {
     const queryClient = useQueryClient()
