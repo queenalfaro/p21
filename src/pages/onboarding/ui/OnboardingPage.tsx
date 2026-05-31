@@ -1,7 +1,7 @@
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Navigate, useNavigate } from "react-router"
+import { Navigate, useNavigate, useSearchParams } from "react-router"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { useUpsertUser, useUserStore } from "@/entities/user"
@@ -17,6 +17,8 @@ export function OnboardingPage() {
     const setUser = useUserStore((s) => s.setUser)
     const upsertUser = useUpsertUser()
     const navigate = useNavigate()
+    const [searchParams] = useSearchParams()
+    const from = searchParams.get("from") ?? "/"
 
     const {
         register,
@@ -25,7 +27,7 @@ export function OnboardingPage() {
     } = useForm<FormData>({ resolver: zodResolver(schema) })
 
     // Already initialized — skip onboarding
-    if (user) return <Navigate to="/" replace />
+    if (user) return <Navigate to={from} replace />
 
     const onSubmit = async ({ name }: FormData) => {
         const created = await upsertUser.mutateAsync({
@@ -34,7 +36,7 @@ export function OnboardingPage() {
             is_anonymous: true,
         })
         setUser(created)
-        navigate("/", { replace: true })
+        navigate(from, { replace: true })
     }
 
     return (

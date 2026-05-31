@@ -1,5 +1,5 @@
 import { useEffect } from "react"
-import { Navigate, Outlet } from "react-router"
+import { Navigate, Outlet, useLocation } from "react-router"
 import { useGetUser, useUserStore } from "@/entities/user"
 import { getCurrentUserId } from "@/shared/lib/identity"
 
@@ -7,6 +7,7 @@ export function UserGuard() {
     const setUser = useUserStore((s) => s.setUser)
     const userId = getCurrentUserId()
     const { data: user, isLoading } = useGetUser(userId)
+    const location = useLocation()
 
     useEffect(() => {
         if (user) setUser(user)
@@ -20,7 +21,11 @@ export function UserGuard() {
         )
     }
 
-    if (!user) return <Navigate to="/onboarding" replace />
+    if (!user) {
+        const from = location.pathname + location.search
+        const to = from === "/" ? "/onboarding" : `/onboarding?from=${encodeURIComponent(from)}`
+        return <Navigate to={to} replace />
+    }
 
     return (
         <div className="mx-auto min-h-svh max-w-[480px] bg-background">
