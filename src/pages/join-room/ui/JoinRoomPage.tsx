@@ -2,7 +2,7 @@ import { useEffect } from "react"
 import { useNavigate, useParams } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
-import { useGetRoomByRoomname, useGetMembership, useJoinRoom } from "@/entities/room"
+import { useGetRoomByRoomname, useGetMembership, useJoinRoom, useRoomMemberCount } from "@/entities/room"
 import { useUserStore } from "@/entities/user"
 import { Badge } from "@/shared/ui/badge"
 import { Button } from "@/shared/ui/button"
@@ -22,6 +22,7 @@ export function JoinRoomPage() {
 
     const { data: room, isLoading: roomLoading, error: roomError } = useGetRoomByRoomname(roomname)
     const { data: membership, isLoading: membershipLoading } = useGetMembership(room?.id, userId)
+    const { data: memberCount } = useRoomMemberCount(room?.id)
     const joinRoom = useJoinRoom(userId)
 
     // If user is already a member, redirect to the room
@@ -108,6 +109,12 @@ export function JoinRoomPage() {
                         >
                             {STATUS_LABEL[room.status ?? "draft"] ?? room.status}
                         </Badge>
+
+                        {memberCount !== undefined && (
+                            <p className="text-muted-foreground text-sm">
+                                {memberCount} member{memberCount !== 1 ? "s" : ""}
+                            </p>
+                        )}
 
                         {room.description && (
                             <p className="text-muted-foreground text-center text-sm">
