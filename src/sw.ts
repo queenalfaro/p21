@@ -103,7 +103,7 @@ registerRoute(
 
 self.addEventListener("push", (event) => {
     const data: { title?: string; body?: string; url?: string } = event.data?.json() ?? {}
-    const title = data.title ?? "Event App"
+    const title = data.title ?? "Event"
     const options: NotificationOptions = {
         body: data.body ?? "",
         icon: "/icons/icon-192.svg",

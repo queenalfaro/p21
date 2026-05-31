@@ -113,7 +113,7 @@ export function HomePage() {
             <header className="bg-background sticky top-0 z-10 border-b">
                 <div className="flex items-center gap-3 px-4 py-3">
                     <UserAvatarButton onClick={() => navigate("/profile")} />
-                    <h1 className="flex-1 text-base font-semibold">Event App</h1>
+                    <h1 className="flex-1 text-base font-semibold">Event</h1>
                     <Button
                         variant="ghost"
                         size="icon"

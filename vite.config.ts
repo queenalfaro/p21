@@ -25,8 +25,8 @@ export default defineConfig({
                 globPatterns: ["**/*.{js,css,html,svg,woff2}"],
             },
             manifest: {
-                name: "Event App",
-                short_name: "EventApp",
+                name: "Event",
+                short_name: "Event",
                 description: "Real-time event engagement platform",
                 theme_color: "#7c3aed",
                 background_color: "#09090b",

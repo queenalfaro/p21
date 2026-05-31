@@ -35,12 +35,12 @@ export function PwaPrompts() {
                         <>
                             <div className="mb-4 flex flex-col items-center gap-3 text-center">
                                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
-                                    EA
+                                    E
                                 </div>
                                 <DialogTitle>App Installed!</DialogTitle>
                             </div>
                             <DialogDescription className="mb-5 text-center text-sm leading-relaxed">
-                                Event App has been added to your home screen. Open it from there for the best experience.
+                                Event has been added to your home screen. Open it from there for the best experience.
                             </DialogDescription>
                             <Button className="w-full" onClick={acknowledgeInstall}>
                                 Got it
@@ -50,12 +50,12 @@ export function PwaPrompts() {
                         /* State 2: OS install dialog open, waiting */
                         <div className="flex flex-col items-center gap-4 py-2 text-center">
                             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
-                                EA
+                                E
                             </div>
                             <DialogTitle>Installing…</DialogTitle>
                             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                             <DialogDescription className="text-sm">
-                                Follow the prompt to add Event App to your home screen.
+                                Follow the prompt to add Event to your home screen.
                             </DialogDescription>
                         </div>
                     ) : (
@@ -71,10 +71,10 @@ export function PwaPrompts() {
 
                             <div className="mb-4 flex items-center gap-3">
                                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
-                                    EA
+                                    E
                                 </div>
                                 <div>
-                                    <DialogTitle>Event App</DialogTitle>
+                                    <DialogTitle>Event</DialogTitle>
                                     <p className="text-xs text-muted-foreground">Install app</p>
                                 </div>
                             </div>
@@ -111,7 +111,7 @@ export function PwaPrompts() {
 
                     <div className="mb-4 flex items-center gap-3">
                         <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
-                            EA
+                            E
                         </div>
                         <div>
                             <DialogTitle>Update Available</DialogTitle>

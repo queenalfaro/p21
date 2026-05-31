@@ -43,7 +43,7 @@ export function OnboardingPage() {
                 <div className="bg-primary text-primary-foreground flex h-16 w-16 items-center justify-center rounded-2xl text-2xl font-bold">
                     E
                 </div>
-                <h1 className="text-2xl font-semibold tracking-tight">Event App</h1>
+                <h1 className="text-2xl font-semibold tracking-tight">Event</h1>
                 <p className="text-muted-foreground text-sm">Enter your name to continue</p>
             </div>
 
