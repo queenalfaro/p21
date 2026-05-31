@@ -1,20 +1,28 @@
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useQuery } from "@tanstack/react-query"
 import {
     AreaChart, Area,
     XAxis, YAxis,
     CartesianGrid, Tooltip,
-    ResponsiveContainer, ReferenceLine,
+    ResponsiveContainer, ReferenceLine, ReferenceArea,
 } from "recharts"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowExpand01Icon, ArrowShrink01Icon, ArrowRight01Icon, Analytics01Icon } from "@hugeicons/core-free-icons"
-import { useAnalyticsTimeline, useCustomMessages } from "@/entities/analytics"
+import { useAnalyticsTimeline, useCustomMessages, useLiveAudience } from "@/entities/analytics"
 import type { CustomMessage } from "@/entities/analytics"
 import { useGetRoom } from "@/entities/room"
+import { useRoadmap, getSegmentIntervals } from "@/entities/roadmap"
 import type { PollPayload, ChecklistPayload, RatingPayload, MessageInteraction } from "@/entities/message"
 import { supabase } from "@/shared/api"
 import { Button } from "@/shared/ui/button"
 import { cn } from "@/shared/lib/cn"
+
+// ── constants ──────────────────────────────────────────────────────────────────
+
+// How often we sample the live audience into the chart's live tail
+const LIVE_SAMPLE_MS = 5_000
+// Max samples to keep in the live tail buffer (10 min at 5 s interval)
+const MAX_LIVE_SAMPLES = 120
 
 // ── helpers ────────────────────────────────────────────────────────────────────
 
@@ -24,7 +32,6 @@ function fmtTime(ts: number): string {
 
 // ── chart tooltip ──────────────────────────────────────────────────────────────
 
-// Custom props instead of Recharts' TooltipProps to avoid version-specific type issues
 interface ChartTooltipProps {
     active?: boolean
     payload?: Array<{ dataKey?: string | number; color?: string; value?: number | string; name?: string }>
@@ -180,6 +187,16 @@ function MessageStats({
     return null
 }
 
+// ── live tail point type ───────────────────────────────────────────────────────
+
+interface LivePoint {
+    ts: number
+    online: number
+    engaged: number
+    distracted: number
+    unknown: number
+}
+
 // ── main component ─────────────────────────────────────────────────────────────
 
 interface AnalyticsDashboardProps {
@@ -200,8 +217,35 @@ export function AnalyticsDashboard({
     const { data: timeline = [], isLoading: timelineLoading } = useAnalyticsTimeline(roomId)
     const { data: customMessages = [] } = useCustomMessages(roomId)
     const { data: room } = useGetRoom(roomId)
+    const { roadmap } = useRoadmap(roomId)
+    const liveAudience = useLiveAudience(roomId)
 
-    // Interactions for the selected message (local query to support enabled flag)
+    // ── live tail accumulation ───────────────────────────────────────────────
+    // We sample the Realtime-derived liveAudience into a rolling buffer every
+    // LIVE_SAMPLE_MS. This creates a smooth "live right edge" on both charts
+    // that extends beyond the last cron-snapshot bucket.
+    const liveTailRef = useRef<LivePoint[]>([])
+    const [liveTail, setLiveTail] = useState<LivePoint[]>([])
+
+    useEffect(() => {
+        const id = setInterval(() => {
+            const point: LivePoint = {
+                ts: Date.now(),
+                online: liveAudience.online,
+                engaged: liveAudience.engaged,
+                distracted: liveAudience.distracted,
+                unknown: liveAudience.unknown,
+            }
+            const next = [...liveTailRef.current, point].slice(-MAX_LIVE_SAMPLES)
+            liveTailRef.current = next
+            setLiveTail(next)
+        }, LIVE_SAMPLE_MS)
+        return () => clearInterval(id)
+    // liveAudience is used by reference inside the interval — re-subscribe when roomId changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [roomId])
+
+    // Interactions for the selected message
     const { data: selectedInteractions = [] } = useQuery({
         queryKey: ["interactions", selectedMessageId ?? ""],
         queryFn: async () => {
@@ -218,14 +262,14 @@ export function AnalyticsDashboard({
         refetchInterval: selectedMessageId ? 10_000 : false,
     })
 
-    // Chart data derived from analytics_timeline
-    // Counts are nullable in the schema (DEFAULT 0 but TS types them as number | null)
-    const onlineData = timeline.map((b) => ({
-        ts: new Date(b.bucket_time).getTime(),
-        total: (b.engaged_count ?? 0) + (b.distracted_count ?? 0) + (b.unknown_count ?? 0),
-    }))
+    // ── chart data ───────────────────────────────────────────────────────────
 
-    const pulseData = timeline.map((b) => {
+    // Historical buckets from analytics_timeline (cron snapshots, 1/min)
+    const histOnline = timeline.map((b) => ({
+        ts: new Date(b.bucket_time).getTime(),
+        online: b.online_count ?? 0,
+    }))
+    const histPulse = timeline.map((b) => {
         const e = b.engaged_count ?? 0
         const d = b.distracted_count ?? 0
         const u = b.unknown_count ?? 0
@@ -238,13 +282,42 @@ export function AnalyticsDashboard({
         }
     })
 
-    // X domain starts from room.starts_at for consistent timeline
+    // Live tail mapped to the same shape as historical data
+    const tailOnline = liveTail.map((p) => ({ ts: p.ts, online: p.online }))
+    const tailPulse = liveTail.map((p) => {
+        const total = p.engaged + p.distracted + p.unknown || 1
+        return {
+            ts: p.ts,
+            engaged: Math.round((p.engaged / total) * 100),
+            distracted: Math.round((p.distracted / total) * 100),
+            unknown: Math.round((p.unknown / total) * 100),
+        }
+    })
+
+    // Merge: historical first, then live tail (deduplicated by last hist ts)
+    const lastHistTs = histOnline.at(-1)?.ts ?? 0
+    const filteredTailOnline = tailOnline.filter((p) => p.ts > lastHistTs)
+    const filteredTailPulse = tailPulse.filter((p) => p.ts > lastHistTs)
+
+    const onlineData = [...histOnline, ...filteredTailOnline]
+    const pulseData = [...histPulse, ...filteredTailPulse]
+
+    // Domain
     const domainStart = room?.starts_at
         ? new Date(room.starts_at).getTime()
         : (onlineData[0]?.ts ?? 0)
     const domainEnd = onlineData.at(-1)?.ts ?? domainStart + 60_000
 
-    const hasData = timeline.length > 0
+    const hasData = onlineData.length > 0
+
+    // ── roadmap segment bands ─────────────────────────────────────────────────
+    // ReferenceArea for each activated roadmap segment (only done/active).
+    // Date.now() is called inside getSegmentIntervals (not passed from render) to avoid
+    // the react-hooks/purity lint rule about calling impure functions during render.
+    const segmentIntervals = getSegmentIntervals(roadmap)
+
+    // Alternating fill colors for adjacent bands
+    const BAND_COLORS = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444"]
 
     function toggleMessage(id: string) {
         setSelectedMessageId((prev) => (prev === id ? null : id))
@@ -276,6 +349,21 @@ export function AnalyticsDashboard({
                     onSelect={() => toggleMessage(m.id)}
                 />
             }
+        />
+    ))
+
+    // Roadmap bands — rendered as semi-transparent ReferenceArea strips
+    const sharedSegmentBands = segmentIntervals.map((seg, i) => (
+        <ReferenceArea
+            key={seg.id}
+            x1={seg.startMs}
+            x2={seg.endMs ?? domainEnd}
+            fill={BAND_COLORS[i % BAND_COLORS.length]}
+            fillOpacity={0.06}
+            stroke={BAND_COLORS[i % BAND_COLORS.length]}
+            strokeOpacity={0.25}
+            strokeWidth={1}
+            label={undefined} // title shown in legend below chart
         />
     ))
 
@@ -314,6 +402,23 @@ export function AnalyticsDashboard({
                 )}
             </div>
 
+            {/* Live counts strip */}
+            {hasData && (
+                <div className="grid grid-cols-4 border-b divide-x shrink-0">
+                    {[
+                        { label: "Online",     value: liveAudience.online,     color: "text-blue-500"  },
+                        { label: "Engaged",    value: liveAudience.engaged,    color: "text-green-500" },
+                        { label: "Distracted", value: liveAudience.distracted, color: "text-orange-400"},
+                        { label: "Unknown",    value: liveAudience.unknown,    color: "text-slate-400" },
+                    ].map(({ label, value, color }) => (
+                        <div key={label} className="flex flex-col items-center py-2 gap-0.5">
+                            <span className={cn("text-lg font-bold leading-none", color)}>{value}</span>
+                            <span className="text-[9px] text-muted-foreground">{label}</span>
+                        </div>
+                    ))}
+                </div>
+            )}
+
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-3 space-y-4">
                 {timelineLoading ? (
@@ -334,6 +439,33 @@ export function AnalyticsDashboard({
                     </div>
                 ) : (
                     <>
+                        {/* Roadmap segment legend (if any activated) */}
+                        {segmentIntervals.length > 0 && (
+                            <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                    Agenda
+                                </p>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {segmentIntervals.map((seg, i) => (
+                                        <span
+                                            key={seg.id}
+                                            className="flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px]"
+                                            style={{
+                                                backgroundColor: `${BAND_COLORS[i % BAND_COLORS.length]}20`,
+                                                color: BAND_COLORS[i % BAND_COLORS.length],
+                                            }}
+                                        >
+                                            <span
+                                                className="inline-block h-1.5 w-1.5 rounded-full"
+                                                style={{ backgroundColor: BAND_COLORS[i % BAND_COLORS.length] }}
+                                            />
+                                            {seg.title}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* 1. Online count */}
                         <div className="space-y-1.5">
                             <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -342,12 +474,13 @@ export function AnalyticsDashboard({
                             <ResponsiveContainer width="100%" height={100}>
                                 <AreaChart data={onlineData} margin={{ top: 10, right: 4, bottom: 0, left: -24 }}>
                                     <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+                                    {sharedSegmentBands}
                                     {sharedXAxis}
                                     <YAxis tick={{ fontSize: 9 }} allowDecimals={false} />
                                     <Tooltip content={<ChartTooltip />} />
                                     <Area
                                         type="monotone"
-                                        dataKey="total"
+                                        dataKey="online"
                                         stroke="#3b82f6"
                                         fill="#3b82f6"
                                         fillOpacity={0.15}
@@ -383,6 +516,7 @@ export function AnalyticsDashboard({
                             <ResponsiveContainer width="100%" height={100}>
                                 <AreaChart data={pulseData} margin={{ top: 10, right: 4, bottom: 0, left: -24 }}>
                                     <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+                                    {sharedSegmentBands}
                                     {sharedXAxis}
                                     <YAxis
                                         tick={{ fontSize: 9 }}

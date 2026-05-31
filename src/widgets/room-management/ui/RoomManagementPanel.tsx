@@ -13,7 +13,7 @@ import { useRoomMembers } from "@/entities/room"
 import type { RoomMemberWithUser } from "@/entities/room"
 import { useUpdateMember, useRemoveMember } from "@/entities/room-member"
 import { useUserStore } from "@/entities/user"
-import { EditRoomForm } from "@/features/room-management"
+import { EditRoomForm, RoadmapEditor } from "@/features/room-management"
 import { Button } from "@/shared/ui/button"
 import { Badge } from "@/shared/ui/badge"
 import { cn } from "@/shared/lib/cn"
@@ -140,7 +140,7 @@ export function RoomManagementPanel({
     isExpanded = false,
 }: RoomManagementPanelProps) {
     const currentUser = useUserStore((s) => s.user)
-    const [section, setSection] = useState<"room" | "members">("room")
+    const [section, setSection] = useState<"room" | "agenda" | "members">("room")
     const { data: members = [], isLoading: membersLoading } = useRoomMembers(roomId)
 
     return (
@@ -179,7 +179,7 @@ export function RoomManagementPanel({
 
             {/* Section tabs */}
             <div className="flex border-b shrink-0">
-                {(["room", "members"] as const).map((tab) => (
+                {(["room", "agenda", "members"] as const).map((tab) => (
                     <button
                         key={tab}
                         onClick={() => setSection(tab)}
@@ -190,7 +190,7 @@ export function RoomManagementPanel({
                                 : "text-muted-foreground hover:text-foreground",
                         )}
                     >
-                        {tab === "members" ? `Members (${members.length})` : "Room Info"}
+                        {tab === "members" ? `Members (${members.length})` : tab === "agenda" ? "Agenda" : "Room Info"}
                     </button>
                 ))}
             </div>
@@ -198,6 +198,8 @@ export function RoomManagementPanel({
             {/* Content */}
             <div className="flex-1 overflow-y-auto">
                 {section === "room" && <EditRoomForm roomId={roomId} />}
+
+                {section === "agenda" && <RoadmapEditor roomId={roomId} />}
 
                 {section === "members" && (
                     <div className="divide-y">

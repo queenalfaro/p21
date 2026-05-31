@@ -40,7 +40,7 @@ export function AvatarUpload({
         try {
             const url = await uploadAvatar(file, storagePath)
             onUploaded(url)
-        } catch (err) {
+        } catch {
             setError("Upload failed")
             setPreview(currentUrl)
         } finally {

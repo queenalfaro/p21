@@ -38,6 +38,7 @@ export type Database = {
                     bucket_time: string
                     distracted_count: number | null
                     engaged_count: number | null
+                    online_count: number
                     room_id: string
                     unknown_count: number | null
                 }
@@ -45,6 +46,7 @@ export type Database = {
                     bucket_time: string
                     distracted_count?: number | null
                     engaged_count?: number | null
+                    online_count?: number
                     room_id: string
                     unknown_count?: number | null
                 }
@@ -52,6 +54,7 @@ export type Database = {
                     bucket_time?: string
                     distracted_count?: number | null
                     engaged_count?: number | null
+                    online_count?: number
                     room_id?: string
                     unknown_count?: number | null
                 }
@@ -71,18 +74,21 @@ export type Database = {
                     room_id: string | null
                     status: string
                     user_id: string
+                    visible: boolean
                 }
                 Insert: {
                     last_ping_at?: string | null
                     room_id?: string | null
                     status: string
                     user_id: string
+                    visible?: boolean
                 }
                 Update: {
                     last_ping_at?: string | null
                     room_id?: string | null
                     status?: string
                     user_id?: string
+                    visible?: boolean
                 }
                 Relationships: [
                     {
@@ -311,10 +317,20 @@ export type Database = {
         }
         Functions: {
             take_analytics_snapshot: { Args: never; Returns: undefined }
-            update_my_status: {
-                Args: { p_room_id: string; p_status: string; p_user_id: string }
-                Returns: undefined
-            }
+            update_my_status:
+                | {
+                      Args: { p_room_id: string; p_status: string; p_user_id: string }
+                      Returns: undefined
+                  }
+                | {
+                      Args: {
+                          p_room_id: string
+                          p_status: string
+                          p_user_id: string
+                          p_visible?: boolean
+                      }
+                      Returns: undefined
+                  }
         }
         Enums: {
             message_type: "text" | "poll" | "checklist" | "rating" | "system"

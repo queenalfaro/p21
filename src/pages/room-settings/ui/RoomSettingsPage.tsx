@@ -12,6 +12,7 @@ import { useGetRoom, useGetMembership, useRoomMembers, useUpdateRoom } from "@/e
 import type { RoomMemberWithUser } from "@/entities/room"
 import { useUserStore } from "@/entities/user"
 import { RoomManagementPanel } from "@/widgets/room-management"
+import { RoadmapTimeline } from "@/widgets/roadmap-timeline"
 import { AvatarUpload } from "@/shared/ui/avatar-upload"
 import { Button } from "@/shared/ui/button"
 import { Badge } from "@/shared/ui/badge"
@@ -193,6 +194,9 @@ export function RoomSettingsPage() {
                             Invite People
                         </Button>
                     </div>
+
+                    {/* Agenda (roadmap) — shown to all members if segments exist */}
+                    <RoadmapTimeline roomId={id!} />
 
                     {/* Members */}
                     <div className="mb-4">

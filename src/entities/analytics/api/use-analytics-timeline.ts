@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/shared/api"
 import type { Tables } from "@/shared/api"
 
+// online_count was added via SQL migration; the DB type is already updated in shared/api/types.ts
 export type AnalyticsTimelineBucket = Tables<"analytics_timeline">
 
 export function useAnalyticsTimeline(roomId: string) {
