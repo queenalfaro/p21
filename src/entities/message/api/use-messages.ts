@@ -7,6 +7,9 @@ const PAGE_SIZE = 50
 export function useMessages(roomId: string) {
     return useInfiniteQuery({
         queryKey: ["messages", roomId],
+        // Always refetch on mount so that messages missed while the subscription
+        // was down (user on another page) are caught up immediately.
+        staleTime: 0,
         initialPageParam: null as string | null,
         queryFn: async ({ pageParam }) => {
             let query = supabase
