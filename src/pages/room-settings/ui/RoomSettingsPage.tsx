@@ -8,10 +8,11 @@ import {
     Calendar01Icon,
     Time01Icon,
 } from "@hugeicons/core-free-icons"
-import { useGetRoom, useGetMembership, useRoomMembers } from "@/entities/room"
+import { useGetRoom, useGetMembership, useRoomMembers, useUpdateRoom } from "@/entities/room"
 import type { RoomMemberWithUser } from "@/entities/room"
 import { useUserStore } from "@/entities/user"
 import { RoomManagementPanel } from "@/widgets/room-management"
+import { AvatarUpload } from "@/shared/ui/avatar-upload"
 import { Button } from "@/shared/ui/button"
 import { Badge } from "@/shared/ui/badge"
 import { cn } from "@/shared/lib/cn"
@@ -77,8 +78,10 @@ export function RoomSettingsPage() {
     const { data: room, isLoading: roomLoading } = useGetRoom(id)
     const { data: membership } = useGetMembership(id, user?.id)
     const { data: members = [], isLoading: membersLoading } = useRoomMembers(id!)
+    const { mutateAsync: updateRoom } = useUpdateRoom(id!)
 
     const isCompleted = room?.status === "completed"
+    const isAdmin = membership?.role === "admin"
     const statusMeta = STATUS_LABELS[room?.status ?? "draft"] ?? STATUS_LABELS.draft
 
     function formatDate(iso: string | null) {
@@ -117,20 +120,25 @@ export function RoomSettingsPage() {
                 <main className="flex-1 overflow-y-auto pb-safe">
                     {/* Room identity */}
                     <div className={cn("flex flex-col items-center gap-3 px-6 py-8 text-center", isCompleted && "opacity-70")}>
-                        <div
-                            className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-bold text-white"
-                            style={{ backgroundColor: avatarColor(room.id) }}
-                        >
-                            {room.avatar_url ? (
-                                <img
-                                    src={room.avatar_url}
-                                    alt={room.name}
-                                    className="h-20 w-20 rounded-full object-cover"
-                                />
-                            ) : (
-                                room.name.charAt(0).toUpperCase()
-                            )}
-                        </div>
+                        {isAdmin ? (
+                            <AvatarUpload
+                                currentUrl={room.avatar_url}
+                                fallback={room.name}
+                                storagePath={`rooms/${room.id}`}
+                                onUploaded={(url) => updateRoom({ avatar_url: url })}
+                            />
+                        ) : (
+                            <div
+                                className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full text-2xl font-bold text-white"
+                                style={{ backgroundColor: avatarColor(room.id) }}
+                            >
+                                {room.avatar_url ? (
+                                    <img src={room.avatar_url} alt={room.name} className="h-full w-full object-cover" />
+                                ) : (
+                                    room.name.charAt(0).toUpperCase()
+                                )}
+                            </div>
+                        )}
                         <div>
                             <h2 className="text-xl font-bold">{room.name}</h2>
                             <p className="text-sm text-muted-foreground">@{room.roomname}</p>

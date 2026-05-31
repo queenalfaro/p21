@@ -1,38 +1,23 @@
 import { useNavigate } from "react-router"
 import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowLeft01Icon } from "@hugeicons/core-free-icons"
-import { useUserStore } from "@/entities/user"
+import { useUserStore, useUpdateUser } from "@/entities/user"
 import { UpdateProfileForm } from "@/features/session"
+import { AvatarUpload } from "@/shared/ui/avatar-upload"
 import { Button } from "@/shared/ui/button"
-
-function UserAvatar({ name, avatarUrl }: { name: string; avatarUrl: string | null }) {
-    const initials = name
-        .split(" ")
-        .slice(0, 2)
-        .map((w) => w.charAt(0).toUpperCase())
-        .join("")
-
-    if (avatarUrl) {
-        return (
-            <img
-                src={avatarUrl}
-                alt={name}
-                className="h-24 w-24 rounded-full object-cover"
-            />
-        )
-    }
-    return (
-        <div className="bg-primary text-primary-foreground flex h-24 w-24 items-center justify-center rounded-full text-3xl font-semibold">
-            {initials}
-        </div>
-    )
-}
 
 export function UserProfilePage() {
     const user = useUserStore((s) => s.user)
+    const setUser = useUserStore((s) => s.setUser)
     const navigate = useNavigate()
+    const updateUser = useUpdateUser(user?.id ?? "")
 
     if (!user) return null
+
+    async function handleAvatarUpload(url: string) {
+        const updated = await updateUser.mutateAsync({ avatar_url: url })
+        setUser(updated)
+    }
 
     return (
         <div className="flex min-h-svh flex-col">
@@ -49,9 +34,14 @@ export function UserProfilePage() {
                 <h1 className="text-base font-semibold">Profile</h1>
             </div>
 
-            {/* Avatar */}
+            {/* Avatar — click to change instantly */}
             <div className="flex flex-col items-center gap-3 px-6 py-8">
-                <UserAvatar name={user.name} avatarUrl={user.avatar_url} />
+                <AvatarUpload
+                    currentUrl={user.avatar_url}
+                    fallback={user.name}
+                    storagePath={`users/${user.id}`}
+                    onUploaded={handleAvatarUpload}
+                />
                 <div className="text-center">
                     <p className="font-semibold">{user.name}</p>
                     {user.username && (
@@ -63,7 +53,7 @@ export function UserProfilePage() {
                 </div>
             </div>
 
-            {/* Form */}
+            {/* Form — name + username only */}
             <div className="flex-1 px-6 pb-8">
                 <UpdateProfileForm user={user} onSuccess={() => navigate(-1)} />
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useRef } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useCreateRoom } from "@/entities/room"
@@ -8,6 +8,7 @@ import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
 import { Textarea } from "@/shared/ui/textarea"
+import { AvatarUpload } from "@/shared/ui/avatar-upload"
 import { createRoomSchema, type CreateRoomValues } from "../model"
 import type { Room } from "@/entities/room"
 
@@ -31,12 +32,8 @@ export function CreateRoomForm({ onSuccess }: CreateRoomFormProps) {
     })
 
     const nameValue = watch("name")
-    const avatarUrlValue = watch("avatar_url")
-    const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-
-    useEffect(() => {
-        setAvatarPreview(avatarUrlValue || null)
-    }, [avatarUrlValue])
+    // Stable temp storage path for this form session (before room has an ID)
+    const tempPathRef = useRef(`rooms/new-${crypto.randomUUID()}`)
 
     async function onSubmit(values: CreateRoomValues) {
         const room = await createRoom.mutateAsync({
@@ -51,38 +48,13 @@ export function CreateRoomForm({ onSuccess }: CreateRoomFormProps) {
 
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-5 px-4 py-6">
-            {/* Avatar preview + URL */}
-            <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-muted">
-                        {avatarPreview ? (
-                            <img
-                                src={avatarPreview}
-                                alt="Room avatar"
-                                className="h-full w-full object-cover"
-                                onError={() => setAvatarPreview(null)}
-                            />
-                        ) : (
-                            <div className="flex h-full w-full items-center justify-center text-sm font-bold text-muted-foreground">
-                                {nameValue ? nameValue.charAt(0).toUpperCase() : "?"}
-                            </div>
-                        )}
-                    </div>
-                    <div className="min-w-0 flex-1 flex flex-col gap-1">
-                        <Label htmlFor="avatar_url">
-                            Avatar URL{" "}
-                            <span className="text-muted-foreground font-normal">(optional)</span>
-                        </Label>
-                        <Input
-                            id="avatar_url"
-                            placeholder="https://…"
-                            {...register("avatar_url")}
-                        />
-                    </div>
-                </div>
-                {errors.avatar_url && (
-                    <p className="text-destructive text-xs">{errors.avatar_url.message}</p>
-                )}
+            <div className="flex justify-center">
+                <AvatarUpload
+                    currentUrl={null}
+                    fallback={nameValue || "?"}
+                    storagePath={tempPathRef.current}
+                    onUploaded={(url) => setValue("avatar_url", url, { shouldDirty: true })}
+                />
             </div>
 
             <div className="flex flex-col gap-1.5">

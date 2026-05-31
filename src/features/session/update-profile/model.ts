@@ -8,7 +8,6 @@ export const updateProfileSchema = z.object({
         .regex(/^[a-z0-9_]*$/, "Lowercase letters, digits and _ only")
         .optional()
         .or(z.literal("")),
-    avatar_url: z.string().url("Must be a valid URL").optional().or(z.literal("")),
 })
 
 export type UpdateProfileData = z.infer<typeof updateProfileSchema>

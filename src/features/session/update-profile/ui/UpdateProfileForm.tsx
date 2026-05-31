@@ -23,7 +23,6 @@ export function UpdateProfileForm({ user, onSuccess }: UpdateProfileFormProps) {
         defaultValues: {
             name: user.name,
             username: user.username ?? "",
-            avatar_url: user.avatar_url ?? "",
         },
     })
 
@@ -31,7 +30,6 @@ export function UpdateProfileForm({ user, onSuccess }: UpdateProfileFormProps) {
         const updated = await updateUser.mutateAsync({
             name: data.name,
             username: data.username || null,
-            avatar_url: data.avatar_url || null,
             is_anonymous: !data.username,
         })
         setUser(updated)
@@ -68,22 +66,6 @@ export function UpdateProfileForm({ user, onSuccess }: UpdateProfileFormProps) {
                 </div>
                 {errors.username && (
                     <p className="text-destructive text-xs">{errors.username.message}</p>
-                )}
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-                <label htmlFor="avatar_url" className="text-sm font-medium">
-                    Avatar URL{" "}
-                    <span className="text-muted-foreground font-normal">(optional)</span>
-                </label>
-                <Input
-                    id="avatar_url"
-                    type="url"
-                    placeholder="https://..."
-                    {...register("avatar_url")}
-                />
-                {errors.avatar_url && (
-                    <p className="text-destructive text-xs">{errors.avatar_url.message}</p>
                 )}
             </div>
 
