@@ -11,6 +11,8 @@ export {
     useRoomMembers,
     usePermissions,
     useUpdateRoom,
+    useRealtimeRoom,
+    useRealtimeMemberCount,
 } from "./api"
 export type { RoomMembership, RoomMemberWithUser } from "./api"
 export { RoomCard } from "./ui/RoomCard"

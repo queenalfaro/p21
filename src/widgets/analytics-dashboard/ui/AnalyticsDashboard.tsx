@@ -10,7 +10,6 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowExpand01Icon, ArrowShrink01Icon, ArrowRight01Icon, Analytics01Icon } from "@hugeicons/core-free-icons"
 import { useAnalyticsTimeline, useCustomMessages, useLiveAudience } from "@/entities/analytics"
 import type { CustomMessage } from "@/entities/analytics"
-import { useGetRoom } from "@/entities/room"
 import { useRoadmap, getSegmentIntervals } from "@/entities/roadmap"
 import type { PollPayload, ChecklistPayload, RatingPayload, MessageInteraction } from "@/entities/message"
 import { supabase } from "@/shared/api"
@@ -216,7 +215,6 @@ export function AnalyticsDashboard({
 
     const { data: timeline = [], isLoading: timelineLoading } = useAnalyticsTimeline(roomId)
     const { data: customMessages = [] } = useCustomMessages(roomId)
-    const { data: room } = useGetRoom(roomId)
     const { roadmap } = useRoadmap(roomId)
     const liveAudience = useLiveAudience(roomId)
 
@@ -302,11 +300,15 @@ export function AnalyticsDashboard({
     const onlineData = [...histOnline, ...filteredTailOnline]
     const pulseData = [...histPulse, ...filteredTailPulse]
 
-    // Domain
-    const domainStart = room?.starts_at
-        ? new Date(room.starts_at).getTime()
-        : (onlineData[0]?.ts ?? 0)
-    const domainEnd = onlineData.at(-1)?.ts ?? domainStart + 60_000
+    // X domain: start from the first actual data point so the chart fills from the left.
+    // Auto-extend rightward as new data comes in — no pinning to starts_at which would
+    // leave a large empty gap on the left when the event started long before data was collected.
+    const firstTs = onlineData[0]?.ts
+    const lastTs = onlineData.at(-1)?.ts
+    // Fallback 0 is never reached when hasData=true (charts are only rendered then).
+    // Ensures at least a 2-minute window so single-point charts aren't collapsed.
+    const domainStart = firstTs ?? 0
+    const domainEnd = lastTs ? Math.max(lastTs, domainStart + 120_000) : domainStart + 120_000
 
     const hasData = onlineData.length > 0
 
@@ -521,7 +523,7 @@ export function AnalyticsDashboard({
                                     <YAxis
                                         tick={{ fontSize: 9 }}
                                         domain={[0, 100]}
-                                        tickFormatter={(v) => `${v}`}
+                                        tickFormatter={(v) => `${v}%`}
                                     />
                                     <Tooltip content={<ChartTooltip />} />
                                     <Area

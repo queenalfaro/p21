@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useParams } from "react-router"
-import { usePermissions } from "@/entities/room"
+import { usePermissions, useRealtimeRoom, useRealtimeMemberCount } from "@/entities/room"
 import { useUserStore } from "@/entities/user"
 import { RoomHeader } from "@/widgets/room-header"
 import { ChatFeed } from "@/widgets/chat-feed"
@@ -16,6 +16,10 @@ export function RoomPage() {
     const user = useUserStore((s) => s.user)
     const { isAdmin, isLoaded } = usePermissions(id, user?.id)
     const isDesktop = useMediaQuery("(min-width: 1024px)")
+
+    // Realtime subscriptions — keep room meta and member count live for all users
+    useRealtimeRoom(id)
+    useRealtimeMemberCount(id)
 
     if (!id) return null
 

@@ -10,18 +10,17 @@ export function ScanPage() {
 
     const handleScan = useCallback(
         (data: string) => {
+            // replace: true removes the scan page from history so "Back" on the
+            // join/room page goes to wherever the user came from, not back to camera.
             try {
                 const url = new URL(data)
-                // Navigate only within our app
                 if (url.origin === window.location.origin) {
-                    navigate(url.pathname + url.search)
+                    navigate(url.pathname + url.search, { replace: true })
                 } else {
-                    // Treat raw data as a roomname fallback
-                    navigate(`/join/${encodeURIComponent(data)}`)
+                    navigate(`/join/${encodeURIComponent(data)}`, { replace: true })
                 }
             } catch {
-                // Not a URL — treat as roomname
-                navigate(`/join/${encodeURIComponent(data)}`)
+                navigate(`/join/${encodeURIComponent(data)}`, { replace: true })
             }
         },
         [navigate],
@@ -30,7 +29,7 @@ export function ScanPage() {
     const { videoRef, error, isReady } = useQRScanner(handleScan)
 
     return (
-        <div className="relative flex min-h-svh flex-col bg-black">
+        <div className="relative flex h-dvh flex-col overflow-hidden bg-black">
             {/* Back button */}
             <div className="absolute left-2 top-2 z-20">
                 <Button
