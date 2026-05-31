@@ -3,6 +3,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
     ArrowExpand01Icon,
     ArrowShrink01Icon,
+    ArrowLeft01Icon,
     Delete02Icon,
     UserStar01Icon,
     User03Icon,
@@ -127,15 +128,16 @@ function MemberRow({ member, roomId, currentUserId }: MemberRowProps) {
 
 interface RoomManagementPanelProps {
     roomId: string
-    /** Called when user clicks the fullscreen toggle (desktop splitscreen) */
-    onFullscreen?: () => void
-    isFullscreen?: boolean
+    onCollapse?: () => void
+    onExpandToggle?: () => void
+    isExpanded?: boolean
 }
 
 export function RoomManagementPanel({
     roomId,
-    onFullscreen,
-    isFullscreen = false,
+    onCollapse,
+    onExpandToggle,
+    isExpanded = false,
 }: RoomManagementPanelProps) {
     const currentUser = useUserStore((s) => s.user)
     const [section, setSection] = useState<"room" | "members">("room")
@@ -146,16 +148,29 @@ export function RoomManagementPanel({
             {/* Header */}
             <div className="flex items-center gap-2 border-b px-3 py-2 shrink-0">
                 <h2 className="flex-1 text-sm font-semibold">Management</h2>
-                {onFullscreen && (
+                {onCollapse && (
                     <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={onFullscreen}
-                        aria-label={isFullscreen ? "Restore layout" : "Expand panel"}
+                        onClick={onCollapse}
+                        aria-label="Collapse panel"
+                        title="Collapse panel"
+                    >
+                        <HugeiconsIcon icon={ArrowLeft01Icon} size={16} />
+                    </Button>
+                )}
+                {onExpandToggle && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={onExpandToggle}
+                        aria-label={isExpanded ? "Restore layout" : "Expand panel"}
+                        title={isExpanded ? "Restore layout" : "Expand panel"}
                     >
                         <HugeiconsIcon
-                            icon={isFullscreen ? ArrowShrink01Icon : ArrowExpand01Icon}
+                            icon={isExpanded ? ArrowShrink01Icon : ArrowExpand01Icon}
                             size={16}
                         />
                     </Button>

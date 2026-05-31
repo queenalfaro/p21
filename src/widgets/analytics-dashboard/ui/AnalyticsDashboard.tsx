@@ -7,7 +7,7 @@ import {
     ResponsiveContainer, ReferenceLine,
 } from "recharts"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowExpand01Icon, ArrowShrink01Icon, Analytics01Icon } from "@hugeicons/core-free-icons"
+import { ArrowExpand01Icon, ArrowShrink01Icon, ArrowRight01Icon, Analytics01Icon } from "@hugeicons/core-free-icons"
 import { useAnalyticsTimeline, useCustomMessages } from "@/entities/analytics"
 import type { CustomMessage } from "@/entities/analytics"
 import { useGetRoom } from "@/entities/room"
@@ -184,14 +184,16 @@ function MessageStats({
 
 interface AnalyticsDashboardProps {
     roomId: string
-    onFullscreen?: () => void
-    isFullscreen?: boolean
+    onCollapse?: () => void
+    onExpandToggle?: () => void
+    isExpanded?: boolean
 }
 
 export function AnalyticsDashboard({
     roomId,
-    onFullscreen,
-    isFullscreen = false,
+    onCollapse,
+    onExpandToggle,
+    isExpanded = false,
 }: AnalyticsDashboardProps) {
     const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null)
 
@@ -283,18 +285,31 @@ export function AnalyticsDashboard({
             <div className="flex items-center gap-2 border-b px-3 py-2 shrink-0">
                 <HugeiconsIcon icon={Analytics01Icon} size={16} className="text-muted-foreground" />
                 <h2 className="flex-1 text-sm font-semibold">Analytics</h2>
-                {onFullscreen && (
+                {onExpandToggle && (
                     <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
-                        onClick={onFullscreen}
-                        aria-label={isFullscreen ? "Restore layout" : "Expand panel"}
+                        onClick={onExpandToggle}
+                        aria-label={isExpanded ? "Restore layout" : "Expand panel"}
+                        title={isExpanded ? "Restore layout" : "Expand panel"}
                     >
                         <HugeiconsIcon
-                            icon={isFullscreen ? ArrowShrink01Icon : ArrowExpand01Icon}
+                            icon={isExpanded ? ArrowShrink01Icon : ArrowExpand01Icon}
                             size={16}
                         />
+                    </Button>
+                )}
+                {onCollapse && (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={onCollapse}
+                        aria-label="Collapse panel"
+                        title="Collapse panel"
+                    >
+                        <HugeiconsIcon icon={ArrowRight01Icon} size={16} />
                     </Button>
                 )}
             </div>
