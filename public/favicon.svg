@@ -1,4 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
-  <rect width="48" height="48" fill="white"/>
-  <text x="24" y="34" font-family="system-ui,sans-serif" font-size="30" font-weight="700" fill="black" text-anchor="middle">E</text>
+  <style>
+    .bg { fill: white; }
+    .letter { fill: black; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: black; }
+      .letter { fill: white; }
+    }
+  </style>
+  <rect class="bg" width="48" height="48"/>
+  <text class="letter" x="24" y="34" font-family="system-ui,sans-serif" font-size="30" font-weight="700" text-anchor="middle">E</text>
 </svg>
