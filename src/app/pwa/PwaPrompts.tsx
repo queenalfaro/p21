@@ -7,6 +7,7 @@ import { usePwaLifecycle } from "./use-pwa-lifecycle"
 export function PwaPrompts() {
     const {
         isInstallable,
+        installPending,
         installAccepted,
         installPrompt,
         dismissInstall,
@@ -16,16 +17,21 @@ export function PwaPrompts() {
         dismissUpdate,
     } = usePwaLifecycle()
 
+    const installDialogOpen = isInstallable || installPending || installAccepted
+
     return (
         <>
             {/* ── Install dialog ───────────────────────────────────────────── */}
             <Dialog
-                open={isInstallable}
+                open={installDialogOpen}
                 onOpenChange={(open) => !open && (installAccepted ? acknowledgeInstall() : dismissInstall())}
             >
-                <DialogContent className="max-w-xs">
+                <DialogContent
+                    className="max-w-xs"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                >
                     {installAccepted ? (
-                        /* Success state — shown after OS accepted install */
+                        /* State 3: installed successfully */
                         <>
                             <div className="mb-4 flex flex-col items-center gap-3 text-center">
                                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
@@ -40,8 +46,20 @@ export function PwaPrompts() {
                                 Got it
                             </Button>
                         </>
+                    ) : installPending ? (
+                        /* State 2: OS install dialog open, waiting */
+                        <div className="flex flex-col items-center gap-4 py-2 text-center">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
+                                EA
+                            </div>
+                            <DialogTitle>Installing…</DialogTitle>
+                            <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                            <DialogDescription className="text-sm">
+                                Follow the prompt to add Event App to your home screen.
+                            </DialogDescription>
+                        </div>
                     ) : (
-                        /* Default install prompt */
+                        /* State 1: offer to install */
                         <>
                             <button
                                 onClick={dismissInstall}

@@ -12,6 +12,7 @@ export function usePwaLifecycle() {
     const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null)
     // Session-only: true after user clicks "Later". Resets on tab close/reload.
     const [installDismissed, setInstallDismissed] = useState(false)
+    const [installPending, setInstallPending] = useState(false)
     const [installAccepted, setInstallAccepted] = useState(false)
     const [updateDismissed, setUpdateDismissed] = useState(false)
 
@@ -21,10 +22,11 @@ export function usePwaLifecycle() {
             e.preventDefault()
             setInstallEvent(e as BeforeInstallPromptEvent)
         }
-        // appinstalled fires when OS finishes installation — close dialog automatically
+        // appinstalled fires when OS finishes — switch to success state
         function onAppInstalled() {
+            setInstallPending(false)
+            setInstallAccepted(true)
             setInstallEvent(null)
-            setInstallAccepted(false)
         }
         window.addEventListener("beforeinstallprompt", onInstallPrompt)
         window.addEventListener("appinstalled", onAppInstalled)
@@ -36,17 +38,19 @@ export function usePwaLifecycle() {
 
     async function installPrompt() {
         if (!installEvent) return
+        setInstallPending(true)
         installEvent.prompt()
         const { outcome } = await installEvent.userChoice
-        if (outcome === "accepted") {
-            setInstallAccepted(true)
-        } else {
+        setInstallPending(false)
+        if (outcome !== "accepted") {
             setInstallEvent(null)
         }
+        // if accepted: appinstalled will fire and set installAccepted = true
     }
 
     function dismissInstall() {
         setInstallDismissed(true)
+        setInstallPending(false)
         setInstallAccepted(false)
     }
 
@@ -75,6 +79,7 @@ export function usePwaLifecycle() {
 
     return {
         isInstallable: installEvent !== null && !installDismissed,
+        installPending,
         installAccepted,
         installPrompt,
         dismissInstall,
