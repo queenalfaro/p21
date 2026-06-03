@@ -14,17 +14,33 @@ function TextContent({ payload }: { payload: TextPayload }) {
     return <p className="whitespace-pre-wrap break-words text-sm">{payload.text}</p>
 }
 
+function stopProp(e: React.MouseEvent) {
+    e.stopPropagation()
+}
+
 function renderContent(message: MessageWithUser, isOwn: boolean): React.ReactNode {
     const payload = message.payload as Record<string, unknown> | null
     switch (message.type) {
         case "text":
             return <TextContent payload={payload as TextPayload} />
         case "poll":
-            return <PollContent messageId={message.id} payload={payload as import("@/entities/message").PollPayload} isOwn={isOwn} />
+            return (
+                <div onClick={stopProp}>
+                    <PollContent messageId={message.id} payload={payload as import("@/entities/message").PollPayload} isOwn={isOwn} />
+                </div>
+            )
         case "checklist":
-            return <ChecklistContent messageId={message.id} payload={payload as import("@/entities/message").ChecklistPayload} isOwn={isOwn} />
+            return (
+                <div onClick={stopProp}>
+                    <ChecklistContent messageId={message.id} payload={payload as import("@/entities/message").ChecklistPayload} isOwn={isOwn} />
+                </div>
+            )
         case "rating":
-            return <RatingContent messageId={message.id} payload={payload as import("@/entities/message").RatingPayload} isOwn={isOwn} />
+            return (
+                <div onClick={stopProp}>
+                    <RatingContent messageId={message.id} payload={payload as import("@/entities/message").RatingPayload} isOwn={isOwn} />
+                </div>
+            )
         case "system":
             return null
         default:
