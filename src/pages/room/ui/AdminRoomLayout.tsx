@@ -189,6 +189,7 @@ export function AdminRoomLayout({ roomId }: AdminRoomLayoutProps) {
                                 roomId={roomId}
                                 replyTo={replyTo}
                                 onClearReply={() => setReplyTo(null)}
+                                isAdmin
                             />
                         </div>
                     )}

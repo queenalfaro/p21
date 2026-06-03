@@ -32,7 +32,7 @@ export function RoomPage() {
         <div className="flex h-dvh flex-col overflow-hidden">
             <RoomHeader roomId={id} isAdmin={isAdmin} />
             <ChatFeed roomId={id} onReply={setReplyTo} />
-            <SendMessage roomId={id} replyTo={replyTo} onClearReply={() => setReplyTo(null)} />
+            <SendMessage roomId={id} replyTo={replyTo} onClearReply={() => setReplyTo(null)} isAdmin={isAdmin} />
         </div>
     )
 }

@@ -10,9 +10,10 @@ interface SendMessageProps {
     roomId: string
     replyTo: MessageWithUser | null
     onClearReply: () => void
+    isAdmin?: boolean
 }
 
-export function SendMessage({ roomId, replyTo, onClearReply }: SendMessageProps) {
+export function SendMessage({ roomId, replyTo, onClearReply, isAdmin = false }: SendMessageProps) {
     const [text, setText] = useState("")
     const [menuOpen, setMenuOpen] = useState(false)
     const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -57,7 +58,9 @@ export function SendMessage({ roomId, replyTo, onClearReply }: SendMessageProps)
 
     return (
         <>
-            <CustomMessageMenu roomId={roomId} open={menuOpen} onOpenChange={setMenuOpen} />
+            {isAdmin && (
+                <CustomMessageMenu roomId={roomId} open={menuOpen} onOpenChange={setMenuOpen} />
+            )}
 
             <div className="bg-background border-t">
                 {/* Reply preview */}
@@ -110,7 +113,7 @@ export function SendMessage({ roomId, replyTo, onClearReply }: SendMessageProps)
                         >
                             <HugeiconsIcon icon={Sent02Icon} size={18} />
                         </Button>
-                    ) : (
+                    ) : isAdmin ? (
                         <Button
                             size="icon"
                             variant="ghost"
@@ -120,7 +123,7 @@ export function SendMessage({ roomId, replyTo, onClearReply }: SendMessageProps)
                         >
                             <HugeiconsIcon icon={MoreHorizontalCircle01Icon} size={20} />
                         </Button>
-                    )}
+                    ) : null}
                 </div>
             </div>
         </>
