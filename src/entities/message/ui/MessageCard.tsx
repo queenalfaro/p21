@@ -65,7 +65,7 @@ export function MessageCard({ message, isOwn, contentSlot, onReply }: MessageCar
                 className={cn(
                     "max-w-[75%] rounded-2xl px-3 py-2 text-sm",
                     isOwn
-                        ? "rounded-br-sm bg-primary text-primary-foreground"
+                        ? "rounded-br-sm bg-own-bubble text-own-bubble-foreground"
                         : "rounded-bl-sm bg-muted text-foreground",
                     onReply && "cursor-pointer active:opacity-80",
                 )}
@@ -92,7 +92,7 @@ export function MessageCard({ message, isOwn, contentSlot, onReply }: MessageCar
                         }
                         className={cn(
                             "mb-1.5",
-                            isOwn ? "bg-white/10" : "bg-black/5",
+                            isOwn ? "bg-black/8" : "bg-black/5",
                         )}
                     />
                 )}
@@ -103,7 +103,7 @@ export function MessageCard({ message, isOwn, contentSlot, onReply }: MessageCar
                 <p
                     className={cn(
                         "mt-0.5 text-right text-[10px] leading-none",
-                        isOwn ? "text-primary-foreground/60" : "text-muted-foreground",
+                        isOwn ? "text-own-bubble-foreground/60" : "text-muted-foreground",
                     )}
                 >
                     {time}
