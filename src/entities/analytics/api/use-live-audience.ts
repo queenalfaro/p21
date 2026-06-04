@@ -75,7 +75,7 @@ export function useLiveAudience(roomId: string): LiveAudienceCounts {
 
 // ── aggregation ────────────────────────────────────────────────────────────────
 
-const HARD_TIMEOUT_MS = 5 * 60 * 1000 // 5 min — mirrors server-side take_analytics_snapshot
+const HARD_TIMEOUT_MS = 60_000 // 60 s — mirrors server-side take_analytics_snapshot staleness threshold
 
 function aggregate(map: Map<string, StateRow>): LiveAudienceCounts {
     const now = Date.now()
