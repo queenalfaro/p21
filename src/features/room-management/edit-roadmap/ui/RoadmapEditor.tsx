@@ -12,6 +12,8 @@ import {
 import { useGetRoom, useUpdateRoom } from "@/entities/room"
 import { useRoadmap } from "@/entities/roadmap"
 import type { RoadmapSegment } from "@/entities/roadmap"
+import { useSendMessage } from "@/entities/message"
+import type { SystemPayload } from "@/entities/message"
 import { Button } from "@/shared/ui/button"
 import { Input } from "@/shared/ui/input"
 import { Label } from "@/shared/ui/label"
@@ -198,18 +200,22 @@ export function RoadmapEditor({ roomId }: RoadmapEditorProps) {
     const { data: room } = useGetRoom(roomId)
     const { roadmap } = useRoadmap(roomId)
     const { mutateAsync: updateRoom, isPending } = useUpdateRoom(roomId)
+    const { mutate: sendMessage } = useSendMessage(roomId)
 
-    // Persist the updated roadmap array back into rooms.settings.roadmap
-    async function saveRoadmap(next: RoadmapSegment[]) {
-        if (!room) return
+    // Persist the updated roadmap array back into rooms.settings.roadmap.
+    // Returns true on success so callers can chain side-effects.
+    async function saveRoadmap(next: RoadmapSegment[]): Promise<boolean> {
+        if (!room) return false
         const currentSettings =
             room.settings && typeof room.settings === "object" && !Array.isArray(room.settings)
                 ? (room.settings as Record<string, unknown>)
                 : {}
         try {
             await updateRoom({ settings: { ...currentSettings, roadmap: next } })
+            return true
         } catch {
             toast.error("Failed to save roadmap")
+            return false
         }
     }
 
@@ -218,14 +224,24 @@ export function RoadmapEditor({ roomId }: RoadmapEditorProps) {
         saveRoadmap(reordered)
     }
 
-    function handleActivate(id: string) {
+    async function handleActivate(id: string) {
+        const seg = roadmap.find((s) => s.id === id)
+        if (!seg) return
+
         const now = new Date().toISOString()
         const next = roadmap.map((s) => {
             if (s.id === id) return { ...s, status: "active" as const, activatedAt: now }
             if (s.status === "active") return { ...s, status: "done" as const }
             return s
         })
-        saveRoadmap(next)
+
+        const saved = await saveRoadmap(next)
+        if (!saved) return
+
+        const payload: SystemPayload = seg.notes?.trim()
+            ? { text: seg.title, subtitle: seg.notes.trim() }
+            : { text: seg.title }
+        sendMessage({ type: "system", payload })
     }
 
     function handleDelete(id: string) {

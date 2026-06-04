@@ -57,7 +57,7 @@ interface MessageItemProps {
 function MessageItem({ message, currentUserId, onReply }: MessageItemProps) {
     if (message.type === "system") {
         const payload = message.payload as SystemPayload
-        return <SystemMessage text={payload.text ?? ""} />
+        return <SystemMessage text={payload.text ?? ""} subtitle={payload.subtitle} />
     }
 
     const isOwn = message.user_id === currentUserId

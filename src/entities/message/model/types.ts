@@ -6,7 +6,7 @@ export type TextPayload = { text: string }
 export type PollPayload = { question: string; options: string[] }
 export type ChecklistPayload = { title: string; items: string[] }
 export type RatingPayload = { question: string; options: string[] }
-export type SystemPayload = { text: string }
+export type SystemPayload = { text: string; subtitle?: string }
 
 // ── Core types ─────────────────────────────────────────────────────────────────
 
